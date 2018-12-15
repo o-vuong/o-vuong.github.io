@@ -1,11 +1,11 @@
 # Site settings
 author: Oscar Vuong
-title: 
+title: Road to Development
 header-img: img/home-bg.png
 email: oscarvuong@gmail.com
 copyright_name: Oscar Vuong
 description: > # this means to ignore newlines until "baseurl:"
-  
+  Watch me learn!
 baseurl: "" # the subpath of your site, e.g. /blog
 twitter_username: 
 github_username:  o-vuong
