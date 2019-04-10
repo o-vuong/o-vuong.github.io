@@ -1,7 +1,7 @@
 ---
 layout: post
 title:      "Overcoming YOU"
-date:       2019-04-10 13:42:29 +0000
+date:       2019-04-10 09:42:31 -0400
 permalink:  overcoming_you
 ---
 
