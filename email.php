@@ -1,7 +1,7 @@
 <?php
 
 $errors = '';								/*==================================*/
-$myemail = 'support@themetrading.com';		//Put Your email address here.
+$myemail = 'oscarvuong@gmail.com';		//Put Your email address here.
 if(empty($_POST['name'])  ||				/*==================================*/
    empty($_POST['email']) ||
    empty($_POST['subject']) || 
