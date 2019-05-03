@@ -4140,6 +4140,10 @@ input[type="button"].btn-block {
   display: none;
 }
 
+.tab { 
+  margin-left: 40px; 
+}
+
 .tab-content > .active {
   display: block;
 }
