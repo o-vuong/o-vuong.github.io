@@ -30,7 +30,7 @@ if( empty($errors))
 	" Here are the details:\n $message"; 
 															/*==========================================*/
 	$headers = "From: o-vuong.github.io \n";  	// Type here where the message has came from
-	$headers .= "Reply-To: $email_address";					/*==========================================*/
+	$headers = "Reply-To: $email_address";					/*==========================================*/
 	
 	$send = mail($to,$email_subject,$email_body,$headers);
 	if($send)
