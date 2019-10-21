@@ -385,6 +385,9 @@ a:hover,a:focus,a.active{
 .background1{
   background-image: url(../images/bg-image/hiking.jpg);
 }
+.background11{
+  background-image: url(../images/bg-image/rockafeller.jpg);
+}
 .background2{
     background: url(../images/background/01.jpg) no-repeat center fixed;
 }
