@@ -221,6 +221,7 @@ a:hover,a:focus,a.active{
 .py_60{
   padding: 60px 0px;
 }
+
 .py_80{
 	padding: 80px 0px;
 }
@@ -241,6 +242,10 @@ a:hover,a:focus,a.active{
 }
 .pb_30{
 	padding-bottom: 30px;
+}
+.ptb_10{ 
+  padding-top: 20px;
+  padding-bottom: 10px;
 }
 
 /*=======================================================================

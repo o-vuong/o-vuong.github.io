@@ -47,8 +47,8 @@
 /*	btn color
 ===================================================================*/
 .btn-default{
-	background-color: #6DF6FF;
-	color: #fff;
+	background-color: #66DCFF;
+	color: #1e283c;
 }
 .btn-default:hover,.btn-default.active{
 	background-color: #1e283c;
