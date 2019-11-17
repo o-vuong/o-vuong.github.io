@@ -312,6 +312,7 @@ a:hover,a:focus,a.active{
     font-size: 18px;
     font-weight: 600;
     padding-left: 35px;
+    padding-bottom: 30px;
 }
 .section_title_1{
   width: 60%;
@@ -322,7 +323,7 @@ a:hover,a:focus,a.active{
 .line_double{
     position: relative;
     text-transform: lowercase;
-    padding: 0 50px !important;
+    padding: 0 50px 10px 50px !important;
 }
 .line_double::before, .line_double::after{
     background-color: #95bb2f;
