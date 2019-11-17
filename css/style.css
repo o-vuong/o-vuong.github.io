@@ -1,11 +1,12 @@
 /**
   
 * Template Name: Runaway - Personal Portfolio HTML Template
-* Version: 2.1.1
+* Version 2.2.1
 * Author: themetrading
 * Email: themetrading@gmail.com
 * Developed By: themetrading
 * First Release: 08 February 2019
+* Last Update : 03 November 2019
 * Author URL: www.themetrading.com
 
 **/
@@ -56,7 +57,7 @@ Table of CSS Content arrage with every section name
 =====================================================================================*/
 body{
 	font-family: 'Open Sans', sans-serif;
-	font-size: 15px;
+	font-size: 16px;
 	line-height: 28px;
 }
 h1,h2,h3,h4,h5,h6{
@@ -278,6 +279,7 @@ a:hover,a:focus,a.active{
   padding-right: 20px;
   font-size: 18px;
 }
+
 /*====================================================================
 05.   Massage Box
 ======================================================================*/
@@ -383,10 +385,7 @@ a:hover,a:focus,a.active{
   background-color: transparent;
 }
 .background1{
-  background-image: url(../images/bg-image/hiking.jpg                            );
-}
-.background11{
-  background-image: url(../images/bg-image/rockafeller.jpg);
+  background-image: url(../images/slider/03.jpg);
 }
 .background2{
     background: url(../images/background/01.jpg) no-repeat center fixed;
@@ -417,6 +416,21 @@ a:hover,a:focus,a.active{
   background-image: url(../images/background/04.jpg);
   background-size: cover;
   background-position: center center;
+}
+.background10{
+  background-image: url(../images/slider/07.jpg);
+}
+.background11{
+  background-image: url(../images/slider/08.jpg);
+}
+.background12{
+  background-image: url(../images/slider/09.jpg);
+}
+.background13{
+  background-image: url(../images/slider/10.jpg);
+}
+.background14{
+  background-image: url(../images/slider/11.jpg);
 }
 /*====================================================================
 08.   Nav Menu Css
@@ -452,7 +466,7 @@ header{
     position: fixed;
     top: -100px;
     width: 100%;
-    z-index: 100;
+    z-index: 9999;
 }
 .navbar-light .navbar-nav .nav-link{
 	letter-spacing:1px;
@@ -551,9 +565,26 @@ ul#menu li a{
   font-size: 30px;
 }
 .mainbanner_content p{
-	font-size: 15px;
+	font-size: 16px;
 	letter-spacing: 1px;
-  width: 50%;
+  width: 60%;
+}
+.particles-js-canvas-el{
+  position: absolute;
+  top: 0;
+  bottom: auto;
+}
+
+#video-container{
+    position: absolute;
+    display: block;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
 }
 /*===============================================================================
 11.   Slider 
@@ -628,7 +659,7 @@ ul#menu li a{
 }
 .about2 img{
   width: 100%;
-  height: 100vh;
+  height: auto;
   max-height: 100%;
 }
 .personal_info ul li{
@@ -916,6 +947,7 @@ ul#menu li a{
 	opacity:0;
 	visibility:hidden;
 }
+
 .default-portfolio-item .overlay-box span{
 	position:absolute;
 	left:0px;
@@ -1045,6 +1077,10 @@ ul#menu li a{
   width: 45px;
   height: 45px;
   line-height: 36px;
+}
+.hover_overlay p{
+  font-size: 15px;
+  line-height: 24px;
 }
 .border{
   width: 100%;
@@ -1593,7 +1629,7 @@ Slider Animation
 
 /*  Default Animation
 ==========================================================================*/
-.default-portfolio-item .overlay-box,.table,.member:hover .data,
+.default-portfolio-item .overlay-box,.table,
 .blog_img img,.blog_item:hover .blog_img img,.blog_item a:hover,
 .page-link,.category_sidebar ul li,.category_sidebar ul li a,.recent_post a,
 .archives ul li a,.tags ul li a,.btn_info{
@@ -1603,12 +1639,13 @@ Slider Animation
     -moz-transition:all 400ms ease-out;
     transition:all 400ms ease-out;
 }
-.default-portfolio-item .overlay-box .arrow span i.fa:hover,.member:hover .hover_overlay{
-    transition:all 0.6s ease 0s;
-    -webkit-transition:all 0.6s ease 0s;
-    -moz-transition:all 0.6s ease 0s;
-    -o-transition:all 0.6s ease 0s;
-    -ms-transition:all 0.6s ease 0s;
+.member .data,
+.default-portfolio-item .overlay-box .arrow span i.fa:hover,.member .hover_overlay{
+    transition:all 0.6s ease-in-out;
+    -webkit-transition:all 0.6s ease-in-out;
+    -moz-transition:all 0.6s ease-in-out;
+    -o-transition:all 0.6s ease-in-out;
+    -ms-transition:all 0.6s ease-in-out;
 }
 .default-portfolio-item .overlay-box,.member .hover_overlay{
     -webkit-transform:scale(0,0);
@@ -1661,7 +1698,6 @@ Slider Animation
     -moz-transform: translate(-50%,-50%);
     -o-transform: translate(-50%,-50%);
 }
-
 /*  Youtube video
 ============================================================================*/
 
@@ -2114,7 +2150,22 @@ label.radios {
   .border p {
       margin-bottom: 15px;
   }
+  .about_myself .main_title p{
+    width: 60%;
+  }
 }
+@media (max-width: 1280px) {
+    .pagegilling-mani-banner .mainbanner_content{
+      margin-left: 150px;
+    }
+    .pagegilling-mani-banner .mainbanner_content .mainbanner_content p{
+      font-size: 16px !important;
+      width: 80%;
+    }
+    .about_myself .main_title p{
+      width: 50%;
+    }
+  }
 /*
 // Large devices (desktops, 992px and up)
 ============================================================*/
@@ -2221,6 +2272,9 @@ label.radios {
   .share_post h4{
     line-height: 31px;
   }
+  .about_myself .main_title p{
+      width: 80%;
+    }
 }
 /*
 // Medium devices (tablets, 768px and up)
@@ -2343,6 +2397,12 @@ label.radios {
   .replied{
       margin-left: 40px;
   }
+  .pagegilling-mani-banner .mainbanner_content{
+      margin-left: 100px;
+    }
+    .about_myself .main_title p{
+      width: 85%;
+    }
 }
 
 /*
@@ -2495,7 +2555,6 @@ label.radios {
   .recent_post_content span{
     font-size: 13px;
   }
-  
   .reply_form{
     margin-bottom: 60px;
   }
@@ -2548,11 +2607,6 @@ label.radios {
   }
   .about_myskill h2{
     font-size: 24px;
-  }
-
-  /*  horizontal and vertical version responsive css */
-  .filter-list .mix{
-    display:block;  
   }
   .main_nav{
     background-color: #818181;
@@ -2655,7 +2709,15 @@ label.radios {
   .replied{
     margin-left: 35px;
   }
-  
+  .pagegilling-mani-banner .mainbanner_content{
+      margin-left: 60px;
+    }
+    .pagegilling-mani-banner .mainbanner_content .cd-headline.clip span{
+      font-size: 18px;
+    }
+    .about_myself .main_title p{
+      width: 90%;
+    }
 }
 
 /* 
@@ -2742,4 +2804,10 @@ label.radios {
   .hover_overlay .border strong {
       font-size: 15px;
   }
+  .pagegilling-mani-banner .mainbanner_content .cd-headline.clip span{
+      font-size: 18px;
+    }
+    .about_myself .main_title p{
+      width: 100%;
+    }
 }
