@@ -2,6 +2,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 
 const app = express();
+const express = require('express');
+const mongoose = require('mongoose');
+const contactRoutes = require('./routes/contact');
+
+const app = express();
+
+app.use(express.json()); // To parse JSON body in POST requests
+app.use('/contact', contactRoutes);
 
 // Replace <password> with your database user's password
 const uri = 'mongodb+srv://ovuong:96UjN8eRRfgxtGJb@personal-site.fedm1.mongodb.net/';
