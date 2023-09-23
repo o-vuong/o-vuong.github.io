@@ -1,28 +1,19 @@
 const express = require('express');
 const mongoose = require('mongoose');
-
-const app = express();
-const express = require('express');
-const mongoose = require('mongoose');
-const contactRoutes = require('./routes/contact');
+const cors = require('cors');
 
 const app = express();
 
-app.use(express.json()); // To parse JSON body in POST requests
-app.use('/contact', contactRoutes);
-
-// Replace <password> with your database user's password
+// MongoDB connection
 const uri = 'mongodb+srv://ovuong:96UjN8eRRfgxtGJb@personal-site.fedm1.mongodb.net/';
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-mongoose.connection.on('connected', () => {
-  console.log('Connected to MongoDB');
-});
+app.use(cors());
+app.use(express.json());
 
-mongoose.connection.on('error', (err) => {
-  console.log('Failed to connect to MongoDB', err);
-});
-
-app.listen(5000, () => {
-  console.log('Server is running on port 5000');
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
