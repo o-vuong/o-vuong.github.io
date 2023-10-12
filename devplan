@@ -1,0 +1,27 @@
+### Overview Plan
+
+#### Phase 1: Initial Setup
+1. **Environment Setup**: Create a virtual environment and install Django.
+2. **Django Project & App**: Initialize a new Django project and create an app for the portfolio.
+
+#### Phase 2: Static Content
+3. **Static Files**: Move all static files (CSS, JS, images) from the static portfolio to Django's `static` directory.
+4. **HTML to Templates**: Convert HTML files to Django templates and place them in the `templates` directory.
+
+#### Phase 3: Dynamic Content
+5. **Database Models**: Create Django models for dynamic content like projects, blogs, etc.
+6. **Admin Interface**: Register models with the Django admin interface for easy content management.
+
+#### Phase 4: Business Logic
+7. **Views**: Create Django views to serve dynamic content.
+8. **URL Routing**: Set up URL patterns to map to the views.
+
+#### Phase 5: Testing & Deployment
+9. **Local Testing**: Test the website locally to ensure everything is working as expected.
+10. **Deployment**: Deploy the Django app to a web server.
+
+#### Phase 6: Optional Enhancements
+11. **User Authentication**: If needed, add user authentication features.
+12. **Additional Features**: Implement any other features like a contact form, search functionality, etc.
+
+Would you like to start with the first phase, or is there a specific phase you'd like to focus on?
