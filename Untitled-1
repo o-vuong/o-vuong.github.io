@@ -1,0 +1,756 @@
+Sure, let's build on the provided HTML file and transform it into a dynamic Next.js application using FastAPI for the backend. This includes setting up secure and validated form submissions, Redux for state management, and sanitizing inputs to prevent code injection.
+
+### Project Structure
+
+```
+ovuong-full stack
+├── backend/
+│   ├── alembic/
+│   │   ├── versions/
+│   │   └── env.py
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── crud.py
+│   │   └── database.py
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   └── .env
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Header.js
+│   │   │   ├── MainBanner.js
+│   │   │   ├── About.js
+│   │   │   ├── Skill.js
+│   │   │   ├── Contact.js
+│   │   │   └── ContactList.js
+│   │   ├── pages/
+│   │   │   ├── _app.js
+│   │   │   ├── index.js
+│   │   ├── store/
+│   │   │   ├── store.js
+│   │   │   └── contactSlice.js
+│   │   ├── styles/
+│   │   │   ├── globals.css
+│   │   └── App.js
+│   ├── package.json
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   └── next.config.js
+└── README.md
+```
+
+### Step-by-Step Build Order
+
+#### 1. Set Up the Backend with FastAPI
+
+1. **Initialize the backend directory**:
+```bash
+mkdir backend
+cd backend
+python -m venv venv
+source venv/bin/activate
+```
+
+2. **Install FastAPI and related dependencies**:
+```bash
+pip install fastapi uvicorn sqlalchemy asyncpg alembic aiosmtplib python-dotenv bleach
+```
+
+3. **Set up Alembic for database migrations**:
+```bash
+alembic init alembic
+```
+
+4. **Configure Alembic**:
+- Edit `alembic.ini` to include your database URL.
+- Edit `alembic/env.py` to use the `async_engine`.
+
+5. **Create SQLAlchemy models**:
+-  Create a `models.py` file   :
+```python
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+
+Base                                              = declarative_base()
+
+class ContactMessage(Base)                        :
+__tablename__                                     = 'contact_messages'
+
+id                                                = Column(Integer, primary_key=True, index=True)
+name                                              = Column(String, index=True)
+email                                             = Column(String, index=True)
+message                                           = Column(String, index=True)
+```
+
+6. **Create Pydantic schemas with sanitization**:
+-  Create a `schemas.py` file                   :
+```python
+from pydantic import BaseModel, EmailStr, validator
+import bleach
+
+class ContactMessageCreate(BaseModel)             :
+name                                              : str
+email                                             : EmailStr
+message                                           : str
+
+@validator('name', 'message', pre=True, always=True)
+def sanitize_input(cls, v)                        :
+return bleach.clean(v, tags                       = [], attributes={}, styles=[], strip=True)
+
+class ContactMessageRead(ContactMessageCreate)    :
+id                                                : int
+```
+
+7. **Create CRUD operations**:
+-  Create a `crud.py` file   :
+```python
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from .models import ContactMessage
+
+async def create_contact_message(db               : AsyncSession, contact_message):
+db_contact_message                                = ContactMessage(**contact_message.dict())
+db.add(db_contact_message)
+await db.commit()
+await db.refresh(db_contact_message)
+return db_contact_message
+
+async def get_contact_messages(db                 : AsyncSession, skip: int = 0, limit: int = 10):
+result                                            = await db.execute(select(ContactMessage).offset(skip).limit(limit))
+return result.scalars().all()
+
+async def get_contact_message(db                  : AsyncSession, contact_message_id: int):
+return await db.get(ContactMessage, contact_message_id)
+
+async def update_contact_message(db               : AsyncSession, contact_message_id: int, contact_message):
+db_contact_message                                = await db.get(ContactMessage, contact_message_id)
+if db_contact_message is None                     :
+return None
+for key, value in contact_message.dict().items()  :
+setattr(db_contact_message, key, value)
+db.add(db_contact_message)
+await db.commit()
+await db.refresh(db_contact_message)
+return db_contact_message
+
+async def delete_contact_message(db               : AsyncSession, contact_message_id: int):
+db_contact_message                                = await db.get(ContactMessage, contact_message_id)
+if db_contact_message is None                     :
+return None
+await db.delete(db_contact_message)
+await db.commit()
+return db_contact_message
+```
+
+8. **Set up the FastAPI app with error handling**:
+-  Create a `main.py` file                       :
+```python
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+from pydantic import BaseModel, EmailStr, validator
+from aiosmtplib import send
+from email.message import EmailMessage
+from starlette.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+import os
+from dotenv import load_dotenv
+import bleach
+from .models import Base, ContactMessage
+from .schemas import ContactMessageCreate, ContactMessageRead
+from .crud import create_contact_message, get_contact_messages, get_contact_message, update_contact_message, delete_contact_message
+
+load_dotenv()
+
+DATABASE_URL                                      = os.getenv("DATABASE_URL")
+SMTP_HOST                                         = os.getenv("SMTP_HOST")
+SMTP_PORT                                         = os.getenv("SMTP_PORT")
+SMTP_USERNAME                                     = os.getenv("SMTP_USERNAME")
+SMTP_PASSWORD                                     = os.getenv("SMTP_PASSWORD")
+EMAIL_FROM                                        = os.getenv("EMAIL_FROM")
+EMAIL_TO                                          = os.getenv("EMAIL_TO")
+
+engine                                            = create_async_engine(DATABASE_URL, echo=True)
+SessionLocal                                      = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
+
+app                                               = FastAPI()
+
+app.add_middleware(
+TrustedHostMiddleware,
+allowed_hosts                                     = ["example.com", "*.example.com"]
+)
+
+app.add_middleware(
+CORSMiddleware,
+allow_origins                                     = ["*"],
+allow_credentials                                 = True,
+allow_methods                                     = ["*"],
+allow_headers                                     = ["*"],
+)
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request          : Request, exc: StarletteHTTPException):
+return JSONResponse({"detail"                     : exc.detail}, status_code=exc.status_code)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request    : Request, exc: RequestValidationError):
+return JSONResponse({"detail"                     : exc.errors()}, status_code=400)
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request       : Request, exc: Exception):
+return JSONResponse({"detail"                     : str(exc)}, status_code=500)
+
+async def get_db()                                :
+async with SessionLocal() as session              :
+yield session
+
+async def send_email(subject                      : str, to: str, html_content: str):
+message                                           = EmailMessage()
+message["From"]                                   = EMAIL_FROM
+message["To"]                                     = to
+message["Subject"]                                = subject
+message.set_content(html_content, subtype         = 'html')
+
+await send(
+message,
+hostname                                          = SMTP_HOST,
+port                                              = SMTP_PORT,
+start_tls                                         = True,
+username                                          = SMTP_USERNAME,
+password                                          = SMTP_PASSWORD,
+)
+
+@app.post("/contact/", response_model=ContactMessageRead)
+async def create_contact_message(contact_message  : ContactMessageCreate, db: AsyncSession = Depends(get_db)):
+db_contact_message                                = await create_contact_message(db, contact_message)
+
+# Send email notification
+email_subject                                     = "New Contact Form Submission"
+email_content                                     = f"""
+<h1>New Contact Form Submission</h1>
+<p><strong>Name                                   : </strong> {contact_message.name}</p>
+<p><strong>Email                                  : </strong> {contact_message.email}</p>
+<p><strong>Message                                : </strong> {contact_message.message}</p>
+"""
+await send_email(email_subject, EMAIL_TO, email_content)
+
+return db_contact_message
+
+if __name__ == "__main__":
+import uvicorn
+uvicorn.run(app, host                             = "0.0.0.0", port=8000)
+```
+
+9. **Create a `.env` file** in the `backend` directory with your environment variables:
+```plaintext
+DATABASE_URL                                      = postgresql+asyncpg://user:password@localhost/my_app
+SMTP_HOST
+
+                                                  = smtp.gmail.com
+SMTP_PORT                                         = 587
+SMTP_USERNAME                                     = your_email@gmail.com
+SMTP_PASSWORD                                     = your_email_password
+EMAIL_FROM                                        = your_email@gmail.com
+EMAIL_TO                                          = your_email@gmail.com
+```
+
+10. **Run Alembic migrations**:
+```bash
+alembic revision --autogenerate -m "Create contact messages table"
+alembic upgrade head
+```
+
+#### 2. Set Up the Frontend with Next.js
+
+1. **Initialize the Next.js project with Bun**:
+```bash
+bun create next ./frontend
+cd frontend
+```
+
+2. **Install Dependencies**:
+```bash
+bun add -D tailwindcss@latest postcss@latest autoprefixer@latest
+bun add @reduxjs/toolkit react-redux axios dompurify
+```
+
+3. **Create Tailwind CSS Configuration**:
+```bash
+npx tailwindcss init -p
+```
+
+4. **Configure Tailwind CSS**:
+-  Edit `tailwind.config.js` :
+```javascript
+module.exports = {
+purge                                             : ['./pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
+darkMode                                          : false,                                                                   // or 'media' or 'class'
+theme   : {
+extend                                            : {},
+},
+variants: {
+extend                                            : {},
+},
+plugins                                           : [],
+}
+```
+
+5. **Set up global styles**                    :
+-  Replace the contents of `styles/globals.css`:
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+6. **Create Redux Store**                                :
+-  Create a `store` directory in `src` and add `store.js`:
+```jsx
+import { configureStore } from '@reduxjs/toolkit';
+import contactReducer from './contactSlice';
+
+const store = configureStore({
+reducer: {
+contacts                                          : contactReducer,
+},
+});
+
+export default store;
+```
+
+7. **Create Contact Slice**                     :
+-  Create `contactSlice.js` in `store` directory:
+```jsx
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
+
+const initialState = {
+contacts                                          : [],
+loading                                           : false,
+error                                             : null,
+};
+
+export const fetchContacts = createAsyncThunk('contacts/fetchContacts', async () => {
+const response                                    = await axios.get('http://localhost:8000/contact/');
+return response.data;
+});
+
+export const addContact = createAsyncThunk('contacts/addContact', async (contact) => {
+const response                                    = await axios.post('http://localhost:8000/contact/', contact);
+return response.data;
+});
+
+const contactSlice = createSlice({
+name                                              : 'contacts',
+initialState,
+reducers                                          : {},
+extraReducers: (builder) => {
+builder
+.addCase(fetchContacts.pending, (state) => {
+state.loading                                     = true;
+state.error                                       = null;
+})
+.addCase(fetchContacts.fulfilled, (state, action) => {
+state.loading                                     = false;
+state.contacts                                    = action.payload;
+})
+.addCase(fetchContacts.rejected, (state, action) => {
+state.loading                                     = false;
+state.error                                       = action.error.message;
+})
+.addCase(addContact.fulfilled, (state, action) => {
+state.contacts.push(action.payload);
+});
+},
+});
+
+export default contactSlice.reducer;
+```
+
+8. **Integrate Redux with Next.js**:
+-  Edit `pages/_app.js`            :
+```jsx
+import { Provider } from 'react-redux';
+import store from '../src/store/store';
+import '../styles/globals.css';
+
+function MyApp({ Component, pageProps }) {
+return (
+<Provider store                                   = {store}>
+<Component {...pageProps} />
+</Provider>
+);
+}
+
+export default MyApp;
+```
+
+9. **Create React Components**:
+
+- **Header.js**:
+```jsx
+import React from 'react';
+import Link from 'next/link';
+
+const Header                                      = () => (
+<header className                                 = "bg-gray-900 text-white">
+<div    className                                 = "container mx-auto">
+<nav    className                                 = "flex justify-between items-center py-4">
+<Link   href                                      = "#top">
+<a      className                                 = "text-xl font-bold"><img className = "h-8" src = "/files/Logos/ovuonglogo_mini.png" alt = "logo" /></a>
+</Link>
+<ul       className                               = "flex space-x-6">
+<li><Link href                                    = "#top"><a className                                = "hover:text-yellow-500">Home</a></Link></li>
+<li><Link href                                    = "#about"><a className                              = "hover:text-yellow-500">About</a></Link></li>
+<li><Link href                                    = "#skill"><a className                              = "hover:text-yellow-500">Skill</a></Link></li>
+<li><Link href                                    = "https://medium.com/@oscarvuong_2095"><a className = "hover:text-yellow-500">Blog</a></Link></li>
+<li><Link href                                    = "#contact"><a className                            = "hover:text-yellow-500">Contact</a></Link></li>
+</ul>
+</nav>
+</div>
+</header>
+);
+
+export default Header;
+```
+
+- **MainBanner.js**:
+```jsx
+import React from 'react';
+
+const MainBanner                                  = () => (
+<section className                                = "bg-gray-800 text-white h-screen flex items-center justify-center">
+<div     className                                = "text-center">
+<h1      className                                = "text-4xl font-bold mb-4">I Am Oscar Vuong!</h1>
+<h2      className                                = "text-2xl mb-4">I am a <span className                                = "text-yellow-500">Software Engineer.</span></h2>
+<p       className                                = "mb-8">Junior Software Engineer,                                       trying to make his place in the world one 0 and 1 at a time.</p>
+<a       className                                = "bg-yellow-500 text-black px-4 py-2 rounded hover:bg-yellow-600" href = "/files/20190920 updated Resume.pdf">Download Resume</a>
+</div>
+</section>
+);
+
+export default MainBanner;
+```
+
+- **About.js**:
+```jsx
+import React from 'react';
+
+const About                                       = () => (
+<section id                                       = "about" className = "py-20 bg-black text-white">
+<div     className                                = "container mx-auto">
+<div     className                                = "text-center mb-12">
+<h2      className                                = "text-3xl font-bold">About</h2>
+<p       className                                = "text-gray-400">"There's a little madness in creativity."</p>
+</div>
+<div className                                    = "flex flex-wrap">
+<div className                                    = "w-full md:w-7/12 px-4">
+<p   className                                    = "mb-4">I'm Oscar Vuong, a full-stack developer with big ambitions and goals...</p>
+<div className                                    = "grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<ul>
+<li><span className                               = "font-semibold">Name :</span> Oscar Vuong</li>
+<li><span className                               = "font-semibold">Email :</span> <a href = "mailto:me@oscarvuong.dev">me@oscarvuong.dev</a></li>
+<li><span className                               = "font-semibold">Phone :</span> <a href = "tel:+16267880621"> +1-626-788-0621</a></li>
+</ul>
+</div>
+<div>
+<ul>
+<li><span className                               = "font-semibold">Address :</span> Los Angeles, California.</li>
+</ul>
+</div>
+</div>
+</div>
+<div className                                    = "w-full md:w-5/12 px-4">
+<div className                                    = "relative">
+<img className                                    = "rounded-lg" src = "images/about/profilephoto.png" alt = "Oscar Vuong" />
+</div>
+</div>
+</div>
+</div>
+</section>
+);
+
+export default About;
+```
+
+- **Skill.js**:
+```jsx
+import React from 'react';
+
+const Skill                                       = () => (
+<section id                                       = "skill" className = "py-20 bg-gray-900 text-white">
+<div     className                                = "container mx-auto text-center">
+<h2      className                                = "text-3xl font-bold mb-12">Skill</h2>
+<div     className                                = "flex flex-wrap">
+<div     className                                = "w-full md:w-6/12 px-4 mb-8">
+<h3      className                                = "text-2xl font-semibold mb-4">Some talk about my professional design skill</h3>
+<p       className                                = "mb-4">In this field learning is a constant as technologies evolve...</p>
+</div>
+<div className                                    = "w-full md:w-6/12 px-4">
+<div className                                    = "mb-4">
+<h4  className                                    = "text-xl font-semibold mb-2">HTML</h4>
+<div className                                    = "bg-gray-800 h-2 rounded-full overflow-hidden">
+<div className
+
+                                                  = "bg-yellow-500 h-full w-7/12"></div>
+</div>
+</div>
+<div className                                    = "mb-4">
+<h4  className                                    = "text-xl font-semibold mb-2">CSS</h4>
+<div className                                    = "bg-gray-800 h-2 rounded-full overflow-hidden">
+<div className                                    = "bg-yellow-500 h-full w-7/12"></div>
+</div>
+</div>
+<div className                                    = "mb-4">
+<h4  className                                    = "text-xl font-semibold mb-2">JavaScript (React/Redux)</h4>
+<div className                                    = "bg-gray-800 h-2 rounded-full overflow-hidden">
+<div className                                    = "bg-yellow-500 h-full w-7/12"></div>
+</div>
+</div>
+<div className                                    = "mb-4">
+<h4  className                                    = "text-xl font-semibold mb-2">Ruby (Rails/Sinatra)</h4>
+<div className                                    = "bg-gray-800 h-2 rounded-full overflow-hidden">
+<div className                                    = "bg-yellow-500 h-full w-7/12"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+);
+
+export default Skill;
+```
+
+- **Contact.js**:
+```jsx
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { addContact } from '../store/contactSlice';
+import DOMPurify from 'dompurify';
+
+const Contact = () => {
+const [formData, setFormData]                     = useState({ name: '', email: '', message: '' });
+const [submitted, setSubmitted]                   = useState(false);
+const [error, setError]                           = useState(null);
+const dispatch                                    = useDispatch();
+
+const handleChange = (e) => {
+const { name, value }                             = e.target;
+setFormData({ ...formData, [name]                 : value });
+};
+
+const sanitizeInput = (input) => {
+return DOMPurify.sanitize(input, { ALLOWED_TAGS   : [], ALLOWED_ATTRS: [] });
+};
+
+const validateForm = () => {
+const { name, email, message }                    = formData;
+if (!name || !email || !message) {
+return 'All fields are required.';
+}
+const emailRegex                                  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!emailRegex.test(email)) {
+return 'Invalid email address.';
+}
+if (name.length > 100) {
+return 'Name is too long.';
+}
+if (message.length > 1000) {
+return 'Message is too long.';
+}
+return null;
+};
+
+const handleSubmit = async (e) => {
+e.preventDefault();
+const validationError                             = validateForm();
+if (validationError) {
+setError(validationError);
+return;
+}
+
+const sanitizedData = {
+name                                              : sanitizeInput(formData.name),
+email                                             : sanitizeInput(formData.email),
+message                                           : sanitizeInput(formData.message)
+};
+
+try {
+await dispatch(addContact(sanitizedData)).unwrap();
+setSubmitted(true);
+setFormData({ name                                : '', email: '', message: '' });
+setError(null);
+} catch (err) {
+if (err.response && err.response.data && err.response.data.detail) {
+setError(`Failed to submit the form: ${err.response.data.detail}`);
+} else {
+setError('Failed to submit the form due to an unexpected error.');
+}
+}
+};
+
+return (
+<section id                                       = "contact" className                  = "py-20 bg-black text-white">
+<div     className                                = "container mx-auto text-center">
+<h2      className                                = "text-3xl font-bold mb-12">Get In Touch</h2>
+<div     className                                = "mb-8">
+<p>Email                                          : <a href  = "mailto:me@oscarvuong.dev" className = "text-yellow-500">me@oscarvuong.dev</a></p>
+<p>Phone                                          : <a href  = "tel:+16267880621" className         = "text-yellow-500">+1-626-788-0621</a></p>
+</div>
+<div className                                    = "flex justify-center">
+{submitted ? (
+<p>Thank you for your message!</p>
+)                                                 : (
+<form onSubmit                                    = {handleSubmit} className = "w-full md:w-1/2">
+{error && <p className                            = "text-red-500">{error}</p>}
+<div   className                                  = "mb-4">
+<label htmlFor                                    = "name" className = "block text-sm font-medium text-gray-300">Name</label>
+<input
+type                                              = "text"
+id                                                = "name"
+name                                              = "name"
+className                                         = "mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-yellow-500 focus:bg-gray-800 focus:ring-0"
+value                                             = {formData.name}
+onChange                                          = {handleChange}
+required
+/>
+</div>
+<div   className                                  = "mb-4">
+<label htmlFor                                    = "email" className = "block text-sm font-medium text-gray-300">Email</label>
+<input
+type                                              = "email"
+id                                                = "email"
+name                                              = "email"
+className                                         = "mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-yellow-500 focus:bg-gray-800 focus:ring-0"
+value                                             = {formData.email}
+onChange                                          = {handleChange}
+required
+/>
+</div>
+<div   className                                  = "mb-4">
+<label htmlFor                                    = "message" className = "block text-sm font-medium text-gray-300">Message</label>
+<textarea
+id                                                = "message"
+name                                              = "message"
+className                                         = "mt-1 block w-full rounded-md bg-gray-700 border-transparent focus:border-yellow-500 focus:bg-gray-800 focus:ring-0"
+value                                             = {formData.message}
+onChange                                          = {handleChange}
+required
+/>
+</div>
+<button type                                      = "submit" className = "bg-yellow-500 text-black px-4 py-2 rounded hover:bg-yellow-600">Submit</button>
+</form>
+)}
+</div>
+</div>
+</section>
+);
+};
+
+export default Contact;
+```
+
+- **ContactList.js**:
+```jsx
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchContacts } from '../store/contactSlice';
+
+const ContactList = () => {
+const dispatch                                    = useDispatch();
+const { contacts, loading, error }                = useSelector((state) => state.contacts);
+
+useEffect(() => {
+dispatch(fetchContacts());
+}, [dispatch]);
+
+if (loading) return <p>Loading...</p>;
+if (error) return <p>Error: {error}</p>;
+
+return (
+<div>
+<h2>Contact Messages</h2>
+<ul>
+{contacts.map(contact => (
+<li key                                           = {contact.id}>
+{contact.name} ({contact.email})                  : {contact.message}
+</li>
+))}
+</ul>
+</div>
+);
+};
+
+export default ContactList;
+```
+
+10. **Create Next.js pages**:
+
+- **index.js**:
+```jsx
+import Head from 'next/head';
+import Header from '../components/Header';
+import MainBanner from '../components/MainBanner';
+import About from '../components/About';
+import Skill from '../components/Skill';
+import Contact from '../components/Contact';
+import ContactList from '../components/ContactList';
+
+export default function Home() {
+return (
+<div>
+<Head>
+<title>Oscar Vuong - Full-Stack Engineer</title>
+<meta charset                                     = "utf-8" />
+<meta name                                        = "viewport" content = "width=device-width, initial-scale=1" />
+</Head>
+<Header />
+<MainBanner />
+<About />
+<Skill />
+<Contact />
+<ContactList />
+</div>
+);
+}
+```
+
+### Running the Project
+
+1. **Start the FastAPI server**:
+```bash
+uvicorn app.main                                  : app --reload
+```
+
+2. **Start the Next.js application**:
+```bash
+bun run dev
+```
+
+Navigate to `http://localhost:3000`, fill out the contact form, and submit it. You should receive an email with the contact form details.
+
+### Summary of Security and Error Handling
+
+**Backend**:
+- Implemented input validation using Pydantic models.
+- Sanitized inputs using the `bleach` library to prevent transmission of malicious code.
+- Added custom error handlers for various exceptions.
+- Configured CORS and Trusted Host middleware for enhanced security.
+
+**Frontend**:
+- Added client-side validation for instant user feedback.
+- Sanitized inputs using the `dompurify` library to prevent transmission of malicious code.
+- Enhanced error handling to display informative error messages to users.
+
+This setup ensures that no malicious code can be transmitted via any field and that your application is secure and handles form submissions robustly with proper error handling and validation.
+/Volumes/LaCie/Dropbox old
